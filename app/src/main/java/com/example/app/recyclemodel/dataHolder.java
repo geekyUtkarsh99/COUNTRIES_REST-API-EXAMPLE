@@ -1,7 +1,9 @@
 package com.example.app.recyclemodel;
 
+import android.annotation.SuppressLint;
 import android.media.Image;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -20,6 +22,7 @@ public class dataHolder extends RecyclerView.ViewHolder {
 
     //items to display
     private TextView country,capital,region,subregion,border,population,languages;
+    public Button saveData = null;
     private ImageView flag = null;
 
     //base constructor
@@ -33,8 +36,8 @@ public class dataHolder extends RecyclerView.ViewHolder {
         population = (TextView)itemView.findViewById(R.id.population);
         languages = (TextView)itemView.findViewById(R.id.languages);
         flag = (ImageView)itemView.findViewById(R.id.flag);
+        saveData = itemView.findViewById(R.id.saveButton);
     }
-
 
 
 

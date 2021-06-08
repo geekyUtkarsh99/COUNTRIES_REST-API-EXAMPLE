@@ -21,6 +21,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -29,8 +32,12 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.AbsListView;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import com.example.app.recyclemodel.adapter;
+import com.example.app.roomDatabase.appDataHandler;
+import com.example.app.roomDatabase.databaseObj;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -49,19 +56,45 @@ public class MainActivity extends AppCompatActivity {
     private JSONArray list = null,semiList = null;
     private ProgressBar loadingBar = null;
     private ProgressBar getItemProgress = null;
+    private FloatingActionButton delete = null;
 
     private static int counter = 0;
+    private boolean network;
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getViews();
+        network = isNetworkAvailable();
+
         getItemProgress.setVisibility(View.INVISIBLE);
         manager = new LinearLayoutManager(this,LinearLayoutManager.VERTICAL,false);
         countries.setLayoutManager(manager);
-        dataCall = new getRestData();
-        loadRest.start();
+        if (network) {
+            dataCall = new getRestData();
+            loadRest.start();
+            delete.setEnabled(false);
+        }else {
+
+
+
+            loadingBar.setVisibility(View.INVISIBLE);
+            adapter = new adapter(null,this,network);
+            countries.setAdapter(adapter);
+
+        }
+//        appDataHandler handler = appDataHandler.getInstance(this);
+//
+//        databaseObj obj = handler.obj();
+//        Log.d(TAG, "onCreate: maps" + obj.allMaps().toString());
 
         //scrollable handler--
         countries.setOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -79,7 +112,8 @@ public class MainActivity extends AppCompatActivity {
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
 
-                if (dy > 0) //check for scroll down
+
+                if (dy > 0 && network) //check for scroll down
                 {
                     visibleItemCount = manager.getChildCount();
                     totalItemCount = manager.getItemCount();
@@ -99,6 +133,24 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    public void onClick(View v){
+
+        if (v.getId() == R.id.deleteData){
+
+            appDataHandler handler = appDataHandler.getInstance(this);
+            databaseObj obj = handler.obj();
+            obj.deleteAll();
+            Toast.makeText(this,"All data deleted",Toast.LENGTH_SHORT).show();
+
+
+            adapter = new adapter(null,this,network);
+            countries.setAdapter(adapter);
+
+
+        }
+
     }
 
     private void editList() throws JSONException {
@@ -126,6 +178,7 @@ public class MainActivity extends AppCompatActivity {
     countries = (RecyclerView)findViewById(R.id.countries);
     loadingBar = (ProgressBar)findViewById(R.id.progressBar);
     getItemProgress = (ProgressBar)findViewById(R.id.progressBar2);
+    delete = findViewById(R.id.deleteData);
     }
 
     Thread loadRest = new Thread(){
@@ -134,6 +187,7 @@ public class MainActivity extends AppCompatActivity {
             super.run();
             dataCall.getArray();
             String d = null;
+            //repeated synchronized call
             while (d == null){
                 d = dataCall.getData();
             }
@@ -144,7 +198,9 @@ public class MainActivity extends AppCompatActivity {
                     semiList.put(list.getJSONObject(i));
                     counter++;
                 }
-                adapter = new adapter(semiList,MainActivity.this);
+                adapter = new adapter(semiList,MainActivity.this,isNetworkAvailable());
+
+                //looper thread
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
